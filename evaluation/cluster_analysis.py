@@ -59,10 +59,6 @@ def plot_2d(data, dim1, dim2, features):
     plt.show()
     return
 
-def get_train_test_set(X, y_true):
-    return train_test_split(X, 0.1)
-
-
 def find_k(data, labels):
     # k means for different cluster sizes with metric evaluation
     metrics = ['Completeness', 'Homogeneity', 'Adjusted Mutual Information', 'Fowlkes Mallows']
@@ -104,11 +100,8 @@ def find_k(data, labels):
     plt.legend(fontsize=15)
     plt.show()
     return scores
-        
 
-    
-    
-
+# load preprocessed data
 kdd = getData()
 
 data = kdd.data
@@ -121,18 +114,19 @@ n_classes = len(classes)
 for t in zip(classes, n_class_sizes):
     print(f'class: {t[0]}, size: {t[1]}')
 
+
+#TODO
+# train test split
+
+# train for k=15?
 k = 15
 kn = KMeans(n_clusters = k)
-y_pred = kn.fit_predict(data)
+#kn.fit(train_data)
 
-# train test split
-#train_data = data[kdd.target == 1]
-#get_train_test_set(data, kdd.target)
-
-# train for k=15
-
-# map cluster labels to class according to maximum of classes in cluster
+# map cluster labels to class label according to which class has most training points in the cluster
 
 # predict test data
+
+# classify test point according to closest cluster label (or other methods..)
 
 
