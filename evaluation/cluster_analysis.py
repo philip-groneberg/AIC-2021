@@ -12,7 +12,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import completeness_score, homogeneity_score, mutual_info_score, fowlkes_mallows_score, normalized_mutual_info_score, calinski_harabasz_score, adjusted_mutual_info_score, davies_bouldin_score, silhouette_score
+from sklearn.metrics import completeness_score, homogeneity_score, mutual_info_score, fowlkes_mallows_score, normalized_mutual_info_score, calinski_harabasz_score, adjusted_mutual_info_score, davies_bouldin_score, silhouette_score, accuracy_score
+import time
 
 def getData():
     kdd = fetch_kddcup99(as_frame = True)
@@ -101,6 +102,8 @@ def find_k(data, labels):
     plt.show()
     return scores
 
+# calculate execution time
+start_time = time.time()
 # load preprocessed data
 kdd = getData()
 
@@ -111,22 +114,47 @@ print(len(data.columns), ' features')
 
 classes, n_class_sizes = np.unique(kdd.target, return_counts = True)
 n_classes = len(classes)
+print("---------------Total--------------")
 for t in zip(classes, n_class_sizes):
     print(f'class: {t[0]}, size: {t[1]}')
 
+# split into test and train data set
+data_train, data_test, labels_train, labels_test = train_test_split(data, labels, test_size=0.25, random_state=42)
 
-#TODO
-# train test split
+train_classes, train_n_class_sizes = np.unique(labels_train, return_counts = True)
+print("---------------Train--------------")
+for t in zip(train_classes, train_n_class_sizes):
+    print(f'class: {t[0]},	size: {t[1]}')
+
+test_classes, test_n_class_sizes = np.unique(labels_test, return_counts = True)
+print("---------------Test--------------")
+for t in zip(test_classes, test_n_class_sizes):
+    print(f'class: {t[0]},	size: {t[1]}')
+
+print("--- Calculation time split: %s seconds ---" % (time.time() - start_time))
 
 # train for k=15?
 k = 15
 kn = KMeans(n_clusters = k)
-#kn.fit(train_data)
+kn.fit(data_train)
 
 # map cluster labels to class label according to which class has most training points in the cluster
 
 # predict test data
+result = kn.predict(data_test)
+accuracy_score = accuracy_score(labels_test, result)
+accuracy_score_formated = format(accuracy_score, '.7f')
+accuracy_unique, accuracy_counts = np.unique(result, return_counts=True)
+
+print("---------------Result--------------")
+print(f'Accuracy:{accuracy_score_formated}')
+for t in zip(accuracy_unique, accuracy_counts):
+	print(f'class: {t[0]},	count: {t[1]}')
+
+score_results = kn.score(data_test)
+print("---------------Score--------------")
+print(score_results)
 
 # classify test point according to closest cluster label (or other methods..)
 
-
+print("--- Calculation time total: %s seconds ---" % (time.time() - start_time))
