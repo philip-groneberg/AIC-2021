@@ -209,10 +209,10 @@ for i in range(len(metrics)):
 plt.xlabel('Cluster amount', fontsize=15)
 plt.ylabel('Metric result', fontsize=15)
 plt.legend(fontsize=15)
-plt.savefig("validation.pdf")
+plt.savefig("validation.pdf", pad_inches=0.05, bbox_inches='tight')
     
 # TESTING WITH SOME K
-ks = [15, 90,110]
+ks = [110]
 for k in ks:
     p=0
     r=0
