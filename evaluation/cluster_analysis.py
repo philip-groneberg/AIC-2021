@@ -11,31 +11,30 @@ from sklearn import preprocessing
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import completeness_score, homogeneity_score, mutual_info_score, fowlkes_mallows_score, normalized_mutual_info_score, calinski_harabasz_score, adjusted_mutual_info_score, davies_bouldin_score, silhouette_score,precision_score, recall_score, accuracy_score
 import time
-range_k = np.arange(2,120, 10)
+range_k = [15, 40, 110]#np.arange(2,120, 10)
     
 
 def getData():
     kdd = fetch_kddcup99(as_frame = True)
     print("fetched")
     integers = list(np.arange(4,23+1)) + [31,32]
-    floats = list(np.arange(24,30+1)) + list(np.arange(33,41)) + [0]
+    double = list(np.arange(24,30+1)) + list(np.arange(33,41)) + [0]
     
     # change all floats and int from 'object' type to correct type
     for i in integers:
         c = kdd.data.columns[i]
-        kdd.data[c] = kdd.data[c].astype(float)
+        kdd.data[c] = kdd.data[c].astype(np.double)
         #print(min(kdd.data[c]), max(kdd.data[c]))
         if max(kdd.data[c].values) != min(kdd.data[c].values):
             kdd.data[c] = (kdd.data[c]-min(kdd.data[c].values))/ (max(kdd.data[c].values)-min(kdd.data[c].values) )
-        #print(min(kdd.data[c]), max(kdd.data[c]))
-    for i in floats:
+    for i in double:
         c = kdd.data.columns[i]
-        kdd.data[c] = kdd.data[c].astype(float) 
+        kdd.data[c] = kdd.data[c].astype(np.double) 
         kdd.data[c] = (kdd.data[c]-min(kdd.data[c].values)) / (max(kdd.data[c].values)-min(kdd.data[c].values) )
-        #print(min(kdd.data[c]), max(kdd.data[c]))
     # use hot encoding (also called dummy encoding). puts eg for each protocol (tcp, udp, icmp) one column which is 0 or 1 -> 3 new columns
     oce = preprocessing.OneHotEncoder(sparse=False)
     dummy_encoded = oce.fit_transform(kdd.data.iloc[:,1:4].values)
@@ -120,7 +119,7 @@ def find_k_validation(train_data, validation_data, validation_labels):
             r += recall_score(validation_labels, is_anomaly)
             a += accuracy_score(validation_labels, is_anomaly)
             
-        print(f'{k} clusters: p={p}, a={a}, r={r}')
+        print(f'{k} clusters: p={p/rounds}, a={a/rounds}, r={r/rounds}')
         scores[0] += [p/rounds]
         scores[1] += [r/rounds]
         scores[2] += [a/rounds]
@@ -142,8 +141,10 @@ def train_val_test_split(data, labels,  train_size, val_size):
     print(normal_data.shape, normal_labels.shape)
     
     # use train_size (0.75) of normal data for training, half of the rest (0.25) for validation and test each
-    data_train, data_rest, labels_train, labels_rest = train_test_split(normal_data, normal_labels, test_size=1-train_size, random_state=42)
-    data_normal_validation, data_normal_test, labels_normal_validation, labels_normal_test = train_test_split(data_rest, labels_rest, test_size=0.5, random_state=42)
+    data_train, data_rest, labels_train, labels_rest = train_test_split(normal_data, 
+                                                                normal_labels, test_size=1-train_size, random_state=42)
+    data_normal_validation, data_normal_test, labels_normal_validation, labels_normal_test = train_test_split(data_rest, 
+                                                                  labels_rest, test_size=0.5, random_state=42)
     
     data_rest = 0
     labels_rest = 0
@@ -152,9 +153,11 @@ def train_val_test_split(data, labels,  train_size, val_size):
     anomaly_labels = labels[labels==1]
     
     # use val_size (0.25) of anomaly data for validation and rest for test
-    data_anomaly_validation, data_anomaly_test, labels_anomaly_validation, labels_anomaly_test = train_test_split(anomaly_data, anomaly_labels, test_size=1-val_size, random_state=42)
+    data_anomaly_validation, data_anomaly_test, labels_anomaly_validation, labels_anomaly_test = train_test_split(anomaly_data,
+                                                                  anomaly_labels, test_size=1-val_size, random_state=42)
     print(len(labels_anomaly_validation), len(labels_anomaly_test))
     
+    # concatenate normal and anomormal data for test and validation
     data_validation = np.append(data_normal_validation, data_anomaly_validation, axis = 0)
     labels_validation = np.append(labels_normal_validation, labels_anomaly_validation)
     data_test = np.append(data_normal_test, data_anomaly_test, axis = 0)
@@ -199,7 +202,7 @@ for t in zip(test_classes, test_n_class_sizes):
 print("--- Calculation time split: %s seconds ---" % (time.time() - start_time))
 
 # TRAINING AND VALIDATION
-scores_validation = find_k_validation(data_train, data_validation, labels_validation)
+#scores_validation = find_k_validation(data_train, data_validation, labels_validation)
 
 # PLOT METRICS FOR EACH K
 metrics = ['Precision', 'Recall', 'Accuracy']
@@ -212,7 +215,8 @@ plt.legend(fontsize=15)
 plt.savefig("validation.pdf", pad_inches=0.05, bbox_inches='tight')
     
 # TESTING WITH SOME K
-ks = [110]
+test_dict = {"metrics": [], "k": [], "values": [], "round": []}
+ks = [15, 40,110]
 for k in ks:
     p=0
     r=0
@@ -230,12 +234,32 @@ for k in ks:
         y_dist = get_dist_to_centroid(kn, data_test, y_pred)
         # if distance bigger than radius -> difference smaller 0 -> label=1 -> anomaly
         is_anomaly = (y_radius - y_dist) < 0
-        p += precision_score(labels_test, is_anomaly)
-        r += recall_score(labels_test, is_anomaly)
-        a += accuracy_score(labels_test, is_anomaly)
+        temp = precision_score(labels_test, is_anomaly)
+        test_dict["values"].append(temp)
+        p += temp
+        temp = recall_score(labels_test, is_anomaly)
+        test_dict["values"].append(temp)
+        r += temp
+        temp = accuracy_score(labels_test, is_anomaly)
+        test_dict["values"].append(temp)
+        a += temp
+        test_dict["k"].append(k)
+        test_dict["k"].append(k) 
+        test_dict["k"].append(k) 
+        test_dict["round"].append(i)
+        test_dict["round"].append(i)
+        test_dict["round"].append(i)
+        test_dict["metrics"].append("precision")
+        test_dict["metrics"].append("recall")
+        test_dict["metrics"].append("accuracy")
     
     print("---------------Result--------------")
-    print(f'accuracy: {a/rounds}, precision: {p/rounds}, recall: {r/rounds}')         
+    print(f'k: {k}, accuracy: {a/rounds}, precision: {p/rounds}, recall: {r/rounds}')         
+
+test_frame = pd.DataFrame(test_dict, columns = ["k", "metrics", "values"])
+sns.set_theme(style="whitegrid")
+#ax = sns.swarmplot(data=test_frame, x="metrics", y="values", hue="round", col="k") #, legend_out=True
+ax = sns.swarmplot(data=test_frame, x="metrics", y="values", hue="k")
 
 """
 # predict test data
