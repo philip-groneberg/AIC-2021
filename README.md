@@ -14,4 +14,4 @@ https://isis.tu-berlin.de/mod/assign/view.php?id=1038998
 
 # Running the project
 
-1. Run python script: `cluster_analysis.py`
+1. Run python script: `evaluation/cluster_analysis.py`
